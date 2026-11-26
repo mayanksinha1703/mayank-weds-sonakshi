@@ -1,0 +1,34 @@
+name: Publish wedding app
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - name: Fetch app files
+        run: |
+          API='https://script.google.com/macros/s/AKfycbwoJ_uO3VdmzmdG23wr9eg9YYLJ7kLv8o1jUbYHqPU6MJOJKtSuz1-oK7GlEJe1AcJ5oQ/exec'
+          mkdir site
+          for f in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable.png; do
+            curl -sSL "$API?action=asset&n=$f" | python3 -c "import sys,json,base64; sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)['b']))" > "site/$f"
+            test -s "site/$f"
+          done
+          touch site/.nojekyll
+          ls -la site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: d
+        uses: actions/deploy-pages@v4
